@@ -9,10 +9,18 @@ class LungCancerProgressionGenerator:
         self.states = ['Healthy', 'Stage I', 'Stage II', 'Stage III', 'Stage IV', 'Death']
         self.doubling_time = doubling_time / 30  # Convert 134 days to months
 
+        # lets have doubling rate as reverse geometric progression
+        self.doubling_times = {
+            1: 134 * 4 / 30,
+            2: 134 * 2 / 30,
+            3: 134 * 1.5 / 30,
+            4: 134 / 30
+        }
+
         # Age-specific cancer occurrence rates (annual per 100,000) for ages 50-70
         self.cancer_rates = {
             (50, 54): 33.2, (55, 59): 79.9, (60, 64): 140.5,
-            (65, 69): 198.4, (70, 74): 262.8
+            (65, 69): 198.4
         }
 
         # Survival rates by stage
@@ -27,23 +35,26 @@ class LungCancerProgressionGenerator:
             1: 0.65,
             2: 0.40,
             3: 0.15,
-            4: 0.5
+            4: 0.05
+        }
+
+        self.monthly_remission_chance_per_stage = {
+            1: 0.1 / 12,
+            2: 0.05 / 12,
+            3: 0.02 / 12,
+            4: 0.01 / 12
         }
 
     def get_cancer_rate(self, age):
         for (lower, upper), rate in self.cancer_rates.items():
             if lower <= age <= upper:
                 return rate / 100000 / 12  # Convert to monthly rate
-        return self.cancer_rates[(65, 69)] / 100000 / 12  # Default to 85+ rate
+        return self.cancer_rates[(65, 69)] / 100000 / 12  # Default to 65+ rate
 
-    def get_monthly_death_probability(self, stage, months_since_diagnosis):
+    def get_monthly_death_probability(self, stage):
         if stage == 0:  # Healthy
             return 0.0
 
-        # if months_since_diagnosis <= 12:
-        # yearly_survival = self.survival_rates[stage]['1year']
-        # else:
-        #     yearly_survival = self.survival_rates[stage]['5year']
         five_year_survival = self.five_year_survival[stage]
 
         monthly_survival = five_year_survival ** (1 / 60)
@@ -67,7 +78,8 @@ class LungCancerProgressionGenerator:
     def generate_patient_trajectory(self, patient_id, use_blood_test=False):
         trajectory = []
         current_state = 0  # Start in Healthy state
-        age = 50  # Random starting age between 50 and 70
+        # Random starting age between 50 and 70
+        age = np.random.randint(50, 71)
         cancer_time = 0  # Time since cancer onset
         months_since_diagnosis = -1  # -1 indicates cancer has not been diagnosed
         months_since_last_test = 0
@@ -98,25 +110,28 @@ class LungCancerProgressionGenerator:
                     months_since_diagnosis += 1
                 cancer_time += 1
 
+
                 # Check for death
-                death_prob = self.get_monthly_death_probability(current_state, months_since_diagnosis)
+                death_prob = self.get_monthly_death_probability(current_state)
                 if np.random.random() < death_prob:
                     target_state = 5  # Death state
-                elif cancer_time >= self.doubling_time * (doublings + 1) and current_state < 4:
+
+                # Check for remission (only if cancer has been diagnosed)
+                elif np.random.random() < self.monthly_remission_chance_per_stage[current_state] and months_since_diagnosis != -1:
+                    target_state = 6
+
+                elif cancer_time >= self.doubling_times[current_state] and current_state < 4:
                     target_state = current_state + 1
-                    cancer_time = 0  # Reset cancer time for the new stage
-                    doublings = 0  # Reset doublings for the new stage
+                    cancer_time = 0
                     if months_since_diagnosis == -1:  # Only check for diagnosis if not yet diagnosed
                         diagnosed_state = self.diagnose_cancer(target_state, use_blood_test)
                         if diagnosed_state > 0:
                             # target_state = diagnosed_state
                             months_since_diagnosis = 0
                             diagnosis_month = month
-                else:
-                    doublings = int(cancer_time / self.doubling_time)  # Update doublings count
 
             # Blood test every 2 years (24 months)
-            if use_blood_test and months_since_last_test >= 24 and months_since_diagnosis == -1:
+            if use_blood_test and months_since_last_test >= 12 and months_since_diagnosis == -1 and target_state != 5 and target_state != 6:
                 months_since_last_test = 0
                 if target_state > 0:  # If cancer is present
                     months_since_diagnosis = 0
