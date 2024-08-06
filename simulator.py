@@ -102,8 +102,6 @@ class LungCancerProgressionGenerator:
 
             elif 1 <= current_state <= 4:  # Cancer stages I-IV
 
-
-
                 cancer_time += 1  # Always increment cancer time once cancer has started
 
                 if months_since_diagnosis >= 0:
@@ -124,21 +122,19 @@ class LungCancerProgressionGenerator:
                     cancer_time = 0
 
             # Check for diagnosis if not yet diagnosed, do it every 3 months
-            if months_since_diagnosis == -1 and month % 6 == 0 and target_state != 5 and target_state != 6:
+            if months_since_diagnosis == -1 and month % 12 == 0 and target_state != 5 and target_state != 6:
                 diagnosed_state = self.diagnose_cancer(target_state)
                 if diagnosed_state > 0:
                     months_since_diagnosis = 0
                     diagnosis_month = month
 
-
             # Blood test every 2 years (24 months)
-            if use_blood_test and months_since_last_test >= 25 and months_since_diagnosis == -1 and target_state != 5 and target_state != 6:
+            if (use_blood_test and months_since_last_test >= 25 and months_since_diagnosis == -1 and target_state != 5
+                    and target_state != 6):
                 months_since_last_test = 0
                 if target_state > 0:  # If cancer is present
                     months_since_diagnosis = 0
                     diagnosis_month = month
-
-
 
             if target_state != 0 or current_state != 0:  # Only record non-Healthy states
                 trajectory.append({
@@ -151,9 +147,6 @@ class LungCancerProgressionGenerator:
                     'time_entry_to_origin': month,
                     'time_transition_to_target': month + 1
                 })
-
-            if target_state == 5:  # If patient has died, stop tracking check removing this
-                break
 
             current_state = target_state  # Update current_state for the next iteration
             age += 1 / 12  # Increase age by 1 month
