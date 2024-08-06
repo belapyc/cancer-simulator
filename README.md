@@ -14,8 +14,8 @@ The simulation can be run with or without the use of blood tests for cancer dete
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/belapyc/CambridgeTest.git
-    cd CambridgeTest
+    git clone https://github.com/belapyc/cancer-simulator.git
+    cd cancer-simulator
     ```
 
 2. Create a conda environment using the `env.txt` file:
