@@ -1,5 +1,8 @@
 # Cancer Progression Simulator
 
+[![DOI](https://zenodo.org/badge/836887984.svg)](https://doi.org/10.5281/zenodo.14651855)
+
+
 This project simulates the progression of cancer in patients over time, including diagnosis, remission, and death. 
 The simulation can be run with or without the use of blood tests for cancer detection.
 
